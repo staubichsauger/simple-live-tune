@@ -12,8 +12,47 @@ is never delayed. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
 
 ## Status
 
-Early development — see the implementation phases in
-[ARCHITECTURE.md](ARCHITECTURE.md).
+All three planned implementation phases (see [ARCHITECTURE.md](ARCHITECTURE.md))
+are complete: the DSP core, the AU/VST3 plugin, and the custom UI with a
+pitch trace and note meter. Remaining ideas (MIDI note targeting, stereo
+link, formant preservation) are optional future work, not blockers.
+
+## Features
+
+- Near-zero-latency pitch correction (2-sample fixed delay when idle; up to
+  one pitch period of variable delay while actively shifting — see
+  [ARCHITECTURE.md](ARCHITECTURE.md) for the full latency budget)
+- Key/scale-based correction (Chromatic, Major, Minor) with adjustable
+  Retune Speed and Note Transition speed
+- Tune Tolerance dead zone, Vibrato preservation, Correction Amount (dry/wet),
+  Confidence Threshold and Gate to avoid tuning breaths/noise
+- Custom UI: live note meter with a ±50 cent deviation display, a scrolling
+  input-vs-corrected pitch trace, and a target-note keyboard strip
+- AU + VST3 + Standalone, built with JUCE; every plugin parameter is
+  remotable for host/hardware integration (see below)
+
+## Building
+
+Requires CMake 3.20+ and a C++20 compiler. JUCE is fetched automatically.
+
+```sh
+cmake -S . -B build
+cmake --build build -j 8
+ctest --test-dir build --output-on-failure
+```
+
+This builds the DSP library, the `offline_tune` CLI tool, the unit tests, and
+(by default) the AU/VST3/Standalone plugin, installing the AU and VST3 to the
+standard user plug-in folders. Pass `-DSIMPLELIVETUNE_BUILD_PLUGIN=OFF` to
+skip JUCE and only build the DSP core, CLI tool, and tests.
+
+## Usage
+
+- **DAW**: insert "Simple Live Tune" (AU or VST3) on a vocal track.
+- **Standalone**: run `build/SimpleLiveTune_artefacts/Standalone/Simple Live Tune.app`
+  for quick mic testing without a DAW.
+- **Offline**: `build/offline_tune <input.wav> <output.wav>` processes a
+  16-bit PCM WAV file through the engine for A/B listening.
 
 ## Acknowledgements
 
