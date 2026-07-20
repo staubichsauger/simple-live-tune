@@ -48,12 +48,13 @@ This builds the DSP library, the `offline_tune` CLI tool, the unit tests, and
 standard user plug-in folders. Pass `-DSIMPLELIVETUNE_BUILD_PLUGIN=OFF` to
 skip JUCE and only build the DSP core, CLI tool, and tests.
 
-Do not omit `-DCMAKE_BUILD_TYPE=Release` when building the plugin for a DAW or
-live host. With single-configuration generators, an unset build type produces
-an unoptimized DSP binary. The pitch detector can then overrun the audio
-deadline at small hardware buffers; 32 samples at 48 kHz allows only about
-0.67 ms per callback. Fully quit and relaunch the host after installing a new
-plugin build so it loads the updated component.
+Keep `-DCMAKE_BUILD_TYPE=Release` explicit when building the plugin for a DAW
+or live host. The project defaults fresh single-configuration build directories
+to Release as a safety net, but an unoptimized DSP binary from an older or
+custom configuration can overrun the audio deadline at small hardware buffers;
+32 samples at 48 kHz allows only about 0.67 ms per callback. Fully quit and
+relaunch the host after installing a new plugin build so it loads the updated
+component.
 
 ### Debug build
 

@@ -182,6 +182,35 @@ void testBlockSizeIndependence()
     for (std::size_t i = 0; i < input.size(); ++i)
         FT_EXPECT_NEAR(outputA[i], outputB[i], 1.0e-9f);
 }
+
+void testRepeatedUnchangedParametersPreserveOutput()
+{
+    const auto input = makeSine(435.0f, 0.8, 0.4f);
+    std::vector<float> outputA(input.size());
+    std::vector<float> outputB(input.size());
+
+    simplelivetune::engine::TuneParameters params;
+    params.retuneTimeMs = 17.0f;
+    params.noteTransitionMs = 43.0f;
+    params.gateDb = -52.0f;
+
+    simplelivetune::engine::TuneEngine engineA;
+    simplelivetune::engine::TuneEngine engineB;
+    engineA.prepare(sampleRate, 32);
+    engineB.prepare(sampleRate, 32);
+    engineA.setParameters(params);
+    engineB.setParameters(params);
+
+    for (std::size_t pos = 0; pos < input.size(); pos += 32) {
+        const auto count = static_cast<int>(std::min<std::size_t>(32, input.size() - pos));
+        engineA.process(input.data() + pos, outputA.data() + pos, count);
+        engineB.setParameters(params);
+        engineB.process(input.data() + pos, outputB.data() + pos, count);
+    }
+
+    for (std::size_t i = 0; i < input.size(); ++i)
+        FT_EXPECT_NEAR(outputA[i], outputB[i], 1.0e-9f);
+}
 }
 
 int main()
@@ -191,4 +220,5 @@ int main()
     testVibratoPreservation();
     testTuneTolerance();
     testBlockSizeIndependence();
+    testRepeatedUnchangedParametersPreserveOutput();
 }

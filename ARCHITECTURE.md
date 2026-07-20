@@ -90,7 +90,10 @@ simple-live-tune/
 - **Outputs**: `f0` (Hz), `confidence` (NSDF peak clarity 0–1), `voiced` flag.
 - **Unvoiced handling**: below confidence threshold (breaths, consonants,
   silence) → no correction; smoother drifts ratio back toward 1.0.
-- Optimization (later): incremental NSDF update instead of full recompute.
+- The first complete window initializes the NSDF correlation cache. Subsequent
+  overlapping windows update it by removing the outgoing hop and adding the
+  incoming hop, reducing recurring work from `O(window × maxLag)` to
+  `O(hop × maxLag)` without allocating on the audio thread.
 
 ### 3.2 ScaleMapper
 - Inputs: `f0`, key/scale selection (chromatic, major, minor, custom mask of

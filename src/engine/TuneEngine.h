@@ -46,6 +46,7 @@ private:
     double analysisSampleRate_ = 12000.0;
     int hopSize_ = 64;
     int hopCounter_ = 0;
+    int analysisSamplesSinceDetection_ = 0;
     int detectorWindow_ = 512;
     TuneParameters parameters_;
     dsp::RingBuffer analysisRing_;
@@ -64,6 +65,7 @@ private:
     float vibratoAlpha_ = 0.0125f;
     int previousMappedNote_ = -1;
     int unvoicedHops_ = 0;
+    bool parametersInitialized_ = false;
 };
 
 } // namespace simplelivetune::engine

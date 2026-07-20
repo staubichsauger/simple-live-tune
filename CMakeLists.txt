@@ -2,6 +2,15 @@ cmake_minimum_required(VERSION 3.20)
 
 project(SimpleLiveTune VERSION 0.1.0 LANGUAGES C CXX)
 
+# Single-configuration generators otherwise accept an empty build type and
+# silently produce an unoptimized plugin. That is unsafe for low-buffer live
+# use, so fresh build directories default to Release while still allowing an
+# explicit Debug or RelWithDebInfo selection.
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release RelWithDebInfo MinSizeRel)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
