@@ -161,10 +161,15 @@ End-to-end live latency = host I/O buffer only (64 samples @ 48 kHz ≈ 1.3 ms).
      impulse/cross-correlation.
 2. **Offline CLI tool** (`tools/offline_tune`): process WAV files of real
    vocals for A/B listening without a DAW.
-3. **Live testing**: load AU into `simple-au-host` (existing project) for fast
-   iteration with a mic; then Logic/Ableton for host-compat checks.
-4. **CPU/RT-safety**: assert no allocations in audio thread (custom allocator
-   guard in debug builds); profile at 64-sample buffers.
+3. **Live testing**: build with `-DCMAKE_BUILD_TYPE=Release`, load the AU into
+   `simple-au-host` (existing project) for fast iteration with a mic, and fully
+   restart the host after installing a new component; then test Logic/Ableton
+   for host compatibility. Never use an unoptimized build to judge live
+   stability.
+4. **CPU/RT-safety**: assert no allocations in the audio thread (custom
+   allocator guard in debug builds). Profile an optimized Release build at 32-
+   and 64-sample buffers, checking peak callback time—not only average CPU—
+   against the hardware deadline.
 
 Reference implementations to study (clean-room only — both are GPL, so no
 code may be copied or ported unless Simple Live Tune itself adopts GPL):

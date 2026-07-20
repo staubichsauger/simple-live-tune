@@ -35,8 +35,10 @@ link, formant preservation) are optional future work, not blockers.
 
 Requires CMake 3.20+ and a C++20 compiler. JUCE is fetched automatically.
 
+### Release build (required for live use)
+
 ```sh
-cmake -S . -B build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j 8
 ctest --test-dir build --output-on-failure
 ```
@@ -45,6 +47,26 @@ This builds the DSP library, the `offline_tune` CLI tool, the unit tests, and
 (by default) the AU/VST3/Standalone plugin, installing the AU and VST3 to the
 standard user plug-in folders. Pass `-DSIMPLELIVETUNE_BUILD_PLUGIN=OFF` to
 skip JUCE and only build the DSP core, CLI tool, and tests.
+
+Do not omit `-DCMAKE_BUILD_TYPE=Release` when building the plugin for a DAW or
+live host. With single-configuration generators, an unset build type produces
+an unoptimized DSP binary. The pitch detector can then overrun the audio
+deadline at small hardware buffers; 32 samples at 48 kHz allows only about
+0.67 ms per callback. Fully quit and relaunch the host after installing a new
+plugin build so it loads the updated component.
+
+### Debug build
+
+Use a separate directory for debugging and development checks:
+
+```sh
+cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-debug -j 8
+ctest --test-dir build-debug --output-on-failure
+```
+
+Debug builds are useful for diagnostics, but are not suitable for evaluating
+realtime performance or dropout behavior.
 
 ## Usage
 
