@@ -32,6 +32,45 @@ juce::String describePitch(float hz)
 }
 }
 
+void ParameterSliderLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y,
+    int width, int height, float sliderPos, float minSliderPos, float maxSliderPos,
+    juce::Slider::SliderStyle style, juce::Slider& slider)
+{
+    if (style != juce::Slider::LinearHorizontal) {
+        juce::LookAndFeel_V4::drawLinearSlider(g, x, y, width, height, sliderPos,
+            minSliderPos, maxSliderPos, style, slider);
+        return;
+    }
+
+    const auto left = static_cast<float>(x) + 7.0f;
+    const auto right = static_cast<float>(x + width) - 7.0f;
+    const auto centreY = static_cast<float>(y) + static_cast<float>(height) * 0.5f;
+    const auto track = juce::Rectangle<float>(left, centreY - 2.5f, right - left, 5.0f);
+    const auto thumbX = juce::jlimit(left, right, sliderPos);
+    const auto enabledAlpha = slider.isEnabled() ? 1.0f : 0.4f;
+
+    g.setColour(juce::Colour(0xff30343f).withMultipliedAlpha(enabledAlpha));
+    g.fillRoundedRectangle(track, 2.5f);
+
+    if (thumbX > left) {
+        auto activeTrack = track;
+        activeTrack.setRight(thumbX);
+        g.setColour(juce::Colour(0xff40a8d0).withMultipliedAlpha(enabledAlpha));
+        g.fillRoundedRectangle(activeTrack, 2.5f);
+    }
+
+    const auto radius = slider.isMouseOverOrDragging() ? 7.0f : 6.0f;
+    g.setColour(juce::Colour(slider.isMouseOverOrDragging() ? 0xff69c5e7 : 0xff40a8d0)
+                    .withMultipliedAlpha(enabledAlpha));
+    g.fillEllipse(thumbX - radius, centreY - radius, radius * 2.0f, radius * 2.0f);
+
+    if (slider.hasKeyboardFocus(false)) {
+        g.setColour(juce::Colour(0xff8adbf4).withAlpha(0.7f));
+        g.drawEllipse(thumbX - radius - 2.0f, centreY - radius - 2.0f,
+            (radius + 2.0f) * 2.0f, (radius + 2.0f) * 2.0f, 1.0f);
+    }
+}
+
 void NoteMeterComponent::update(float inputHz, float correctedHz, int targetMidiNote)
 {
     if (targetMidiNote < 0 || inputHz <= 0.0f) {
@@ -228,13 +267,30 @@ SimpleLiveTuneAudioProcessorEditor::SimpleLiveTuneAudioProcessorEditor(SimpleLiv
     setUpCombo(keyBox_, keyLabel_, "Key", "key");
     setUpCombo(scaleBox_, scaleLabel_, "Scale", "scale");
 
-    setUpRotary(retuneSlider_, retuneLabel_, "Retune");
-    setUpRotary(transitionSlider_, transitionLabel_, "Transition");
-    setUpRotary(amountSlider_, amountLabel_, "Amount");
-    setUpRotary(vibratoSlider_, vibratoLabel_, "Vibrato");
-    setUpRotary(toleranceSlider_, toleranceLabel_, "Tolerance");
-    setUpRotary(confidenceSlider_, confidenceLabel_, "Confidence");
-    setUpRotary(gateSlider_, gateLabel_, "Gate");
+    const auto setUpGroupLabel = [this](juce::Label& label, const juce::String& text) {
+        label.setText(text, juce::dontSendNotification);
+        label.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+        label.setColour(juce::Label::textColourId, juce::Colour(0xffaeb5c4));
+        addAndMakeVisible(label);
+    };
+    setUpGroupLabel(correctionGroupLabel_, "CORRECTION");
+    setUpGroupLabel(detectionGroupLabel_, "DETECTION");
+
+    setUpLinear(retuneSlider_, retuneLabel_, "Retune speed", 20.0, " ms");
+    setUpLinear(transitionSlider_, transitionLabel_, "Note transition", 60.0, " ms");
+    setUpLinear(amountSlider_, amountLabel_, "Correction", 1.0);
+    setUpLinear(vibratoSlider_, vibratoLabel_, "Vibrato", 0.0);
+    setUpLinear(toleranceSlider_, toleranceLabel_, "Tolerance", 0.0, " ct");
+    setUpLinear(confidenceSlider_, confidenceLabel_, "Confidence", 0.95);
+    setUpLinear(gateSlider_, gateLabel_, "Gate", -45.0, " dB");
+
+    retuneSlider_.setTooltip("0 ms is fast and hard; 400 ms is slower and more natural");
+    transitionSlider_.setTooltip("How smoothly correction moves between notes");
+    amountSlider_.setTooltip("Overall strength of pitch correction");
+    vibratoSlider_.setTooltip("How much of the singer's vibrato is preserved");
+    toleranceSlider_.setTooltip("Pitch deviation allowed before correction begins");
+    confidenceSlider_.setTooltip("Minimum pitch-detection confidence required for correction");
+    gateSlider_.setTooltip("Input level below which pitch correction is disabled");
 
     addAndMakeVisible(bypassButton_);
 
@@ -249,18 +305,47 @@ SimpleLiveTuneAudioProcessorEditor::SimpleLiveTuneAudioProcessorEditor(SimpleLiv
     gateAttachment_ = std::make_unique<SliderAttachment>(apvts, "gate", gateSlider_);
     bypassAttachment_ = std::make_unique<ButtonAttachment>(apvts, "bypass", bypassButton_);
 
+    // SliderAttachment installs the parameter's default value-to-text callbacks,
+    // so UI-specific percentage formatting has to be applied afterwards.
+    const auto setUpPercentage = [](juce::Slider& slider) {
+        slider.textFromValueFunction = [](double value) {
+            return juce::String(static_cast<int>(std::lround(value * 100.0))) + "%";
+        };
+        slider.valueFromTextFunction = [](const juce::String& text) {
+            return text.getDoubleValue() / 100.0;
+        };
+        slider.updateText();
+    };
+    setUpPercentage(amountSlider_);
+    setUpPercentage(vibratoSlider_);
+    setUpPercentage(confidenceSlider_);
+
     setSize(680, 620);
     startTimerHz(kTraceRateHz);
 }
 
-SimpleLiveTuneAudioProcessorEditor::~SimpleLiveTuneAudioProcessorEditor() = default;
-
-void SimpleLiveTuneAudioProcessorEditor::setUpRotary(juce::Slider& slider, juce::Label& label, const juce::String& text)
+SimpleLiveTuneAudioProcessorEditor::~SimpleLiveTuneAudioProcessorEditor()
 {
-    slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 18);
+    for (auto* slider : { &retuneSlider_, &transitionSlider_, &amountSlider_, &vibratoSlider_,
+             &toleranceSlider_, &confidenceSlider_, &gateSlider_ })
+        slider->setLookAndFeel(nullptr);
+}
+
+void SimpleLiveTuneAudioProcessorEditor::setUpLinear(juce::Slider& slider, juce::Label& label,
+    const juce::String& text, double defaultValue, const juce::String& suffix)
+{
+    slider.setSliderStyle(juce::Slider::LinearHorizontal);
+    slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 64, 24);
+    slider.setDoubleClickReturnValue(true, defaultValue);
+    slider.setTextValueSuffix(suffix);
+    slider.setLookAndFeel(&parameterSliderLookAndFeel_);
+    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xfff3f4f7));
+    slider.setColour(juce::Slider::textBoxBackgroundColourId, juce::Colour(0xff171920));
+    slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colour(0xff353946));
+    slider.setColour(juce::Slider::textBoxHighlightColourId, juce::Colour(0xff40a8d0));
     label.setText(text, juce::dontSendNotification);
-    label.setJustificationType(juce::Justification::centred);
+    label.setJustificationType(juce::Justification::centredLeft);
+    label.setColour(juce::Label::textColourId, juce::Colour(0xffe4e7ed));
     addAndMakeVisible(slider);
     addAndMakeVisible(label);
 }
@@ -268,6 +353,14 @@ void SimpleLiveTuneAudioProcessorEditor::setUpRotary(juce::Slider& slider, juce:
 void SimpleLiveTuneAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(0xff1d1f27));
+
+    g.setColour(juce::Colour(0xff181a21));
+    g.fillRoundedRectangle(correctionPanelBounds_.toFloat(), 7.0f);
+    g.fillRoundedRectangle(detectionPanelBounds_.toFloat(), 7.0f);
+
+    g.setColour(juce::Colour(0xff2b2f39));
+    g.drawRoundedRectangle(correctionPanelBounds_.toFloat(), 7.0f, 1.0f);
+    g.drawRoundedRectangle(detectionPanelBounds_.toFloat(), 7.0f, 1.0f);
 }
 
 void SimpleLiveTuneAudioProcessorEditor::resized()
@@ -305,20 +398,36 @@ void SimpleLiveTuneAudioProcessorEditor::resized()
     bypassButton_.setBounds(selectors.reduced(8, 12));
 
     area.removeFromTop(10);
-    const auto knobWidth = area.getWidth() / 7;
+    constexpr auto panelGap = 10;
+    const auto panelWidth = (area.getWidth() - panelGap) / 2;
+    correctionPanelBounds_ = area.removeFromLeft(panelWidth);
+    area.removeFromLeft(panelGap);
+    detectionPanelBounds_ = area;
 
-    const auto layoutKnob = [&area, knobWidth](juce::Label& label, juce::Slider& slider) {
-        auto knobArea = area.removeFromLeft(knobWidth);
-        label.setBounds(knobArea.removeFromTop(18));
-        slider.setBounds(knobArea.reduced(4));
+    const auto layoutPanel = [](juce::Rectangle<int> panel, juce::Label& groupLabel,
+                                 std::initializer_list<std::pair<juce::Label*, juce::Slider*>> controls) {
+        panel.reduce(12, 8);
+        groupLabel.setBounds(panel.removeFromTop(22));
+        panel.removeFromTop(2);
+        const auto rowHeight = panel.getHeight() / static_cast<int>(controls.size());
+        for (const auto& [label, slider] : controls) {
+            auto row = panel.removeFromTop(rowHeight);
+            label->setBounds(row.removeFromLeft(104));
+            slider->setBounds(row);
+        }
     };
-    layoutKnob(retuneLabel_, retuneSlider_);
-    layoutKnob(transitionLabel_, transitionSlider_);
-    layoutKnob(amountLabel_, amountSlider_);
-    layoutKnob(vibratoLabel_, vibratoSlider_);
-    layoutKnob(toleranceLabel_, toleranceSlider_);
-    layoutKnob(confidenceLabel_, confidenceSlider_);
-    layoutKnob(gateLabel_, gateSlider_);
+
+    layoutPanel(correctionPanelBounds_, correctionGroupLabel_, {
+        { &retuneLabel_, &retuneSlider_ },
+        { &transitionLabel_, &transitionSlider_ },
+        { &amountLabel_, &amountSlider_ },
+        { &vibratoLabel_, &vibratoSlider_ },
+    });
+    layoutPanel(detectionPanelBounds_, detectionGroupLabel_, {
+        { &toleranceLabel_, &toleranceSlider_ },
+        { &confidenceLabel_, &confidenceSlider_ },
+        { &gateLabel_, &gateSlider_ },
+    });
 }
 
 void SimpleLiveTuneAudioProcessorEditor::timerCallback()

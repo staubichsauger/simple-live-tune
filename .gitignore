@@ -1,2 +1,10 @@
-build/
+# CMake build trees
+/build/
+/build-*/
+/cmake-build-*/
+
+# Packaged release output
+/dist/
+
+# macOS metadata
 .DS_Store

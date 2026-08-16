@@ -55,6 +55,16 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PitchTraceComponent)
 };
 
+// Compact linear controls are easier to scan and adjust than a row of rotary
+// controls. This look-and-feel keeps the track understated and uses the same
+// cyan accent as the rest of the editor.
+class ParameterSliderLookAndFeel : public juce::LookAndFeel_V4 {
+public:
+    void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
+        float sliderPos, float minSliderPos, float maxSliderPos,
+        juce::Slider::SliderStyle style, juce::Slider& slider) override;
+};
+
 class SimpleLiveTuneAudioProcessorEditor : public juce::AudioProcessorEditor,
                                       private juce::Timer {
 public:
@@ -66,7 +76,8 @@ public:
 
 private:
     void timerCallback() override;
-    void setUpRotary(juce::Slider& slider, juce::Label& label, const juce::String& text);
+    void setUpLinear(juce::Slider& slider, juce::Label& label, const juce::String& text,
+        double defaultValue, const juce::String& suffix = {});
 
     SimpleLiveTuneAudioProcessor& processor_;
 
@@ -84,6 +95,12 @@ private:
     juce::Label keyLabel_;
     juce::Label scaleLabel_;
     juce::ToggleButton bypassButton_ { "Bypass" };
+
+    ParameterSliderLookAndFeel parameterSliderLookAndFeel_;
+    juce::Label correctionGroupLabel_;
+    juce::Label detectionGroupLabel_;
+    juce::Rectangle<int> correctionPanelBounds_;
+    juce::Rectangle<int> detectionPanelBounds_;
 
     juce::Slider retuneSlider_;
     juce::Slider transitionSlider_;
