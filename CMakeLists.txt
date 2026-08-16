@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(SimpleLiveTune VERSION 0.1.0 LANGUAGES C CXX)
+project(SimpleLiveTune VERSION 0.1.1 LANGUAGES C CXX)
 
 # Single-configuration generators otherwise accept an empty build type and
 # silently produce an unoptimized plugin. That is unsafe for low-buffer live
