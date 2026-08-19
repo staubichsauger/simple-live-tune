@@ -21,9 +21,10 @@ running macOS 11 or later.
 3. Install the format your host supports:
    - Copy the AU file to `~/Library/Audio/Plug-Ins/Components/`.
    - Copy the VST3 file to `~/Library/Audio/Plug-Ins/VST3/`.
+   - Copy the CLAP file to `~/Library/Audio/Plug-Ins/CLAP/`.
 4. Fully reopen your host and rescan its plug-ins if necessary.
 
-You can install both formats. To test a microphone without a DAW, copy the
+You can install more than one format. To test a microphone without a DAW, copy the
 included Simple Live Tune standalone app to your Applications folder.
 
 The download includes a more detailed installation guide.
@@ -74,7 +75,8 @@ original and corrected pitch over time.
 ### The plug-in does not appear
 
 Make sure you copied it to the correct folder, fully quit and reopened the
-host, and rescanned the plug-in list. Check whether your host uses AU or VST3.
+host, and rescanned the plug-in list. Check whether your host uses AU, VST3, or
+CLAP.
 
 ### The standalone app receives no microphone signal
 
