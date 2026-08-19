@@ -1,7 +1,8 @@
 # Simple Live Tune
 
 Simple Live Tune is a free pitch-correction plug-in for live vocals. It moves
-sung notes toward the selected key and scale without delaying the audio path.
+sung notes toward the selected key and scale and adds no latency to the audio
+path.
 
 It builds as a CLAP, VST3 plug-in, and standalone app on macOS and Linux. A
 macOS build also includes an Audio Unit (AU).
