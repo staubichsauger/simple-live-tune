@@ -3,8 +3,8 @@
 Simple Live Tune is a free pitch-correction plug-in for live vocals. It moves
 sung notes toward the selected key and scale without delaying the audio path.
 
-It is available for macOS as an Audio Unit (AU), VST3 plug-in, and standalone
-app.
+It builds as a CLAP, VST3 plug-in, and standalone app on macOS and Linux. A
+macOS build also includes an Audio Unit (AU).
 
 ## Download
 
@@ -93,8 +93,25 @@ Raise Gate or Confidence Threshold until the unwanted correction stops.
 ## Technical information
 
 Read the [architecture and DSP notes](ARCHITECTURE.md) for implementation
-details. Building from source requires CMake 3.20+ and a C++20 compiler. CMake
-downloads JUCE during setup.
+details. Building from source requires CMake 3.21+, Git, and a C++20 compiler.
+CMake downloads JUCE and the CLAP wrapper during setup.
+
+Configure and build a release on Linux with:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target SimpleLiveTune_VST3 SimpleLiveTune_CLAP SimpleLiveTune_Standalone -j
+ctest --test-dir build --output-on-failure
+```
+
+JUCE also needs the usual Linux audio, X11, FreeType, and fontconfig development
+packages. Build products are written below
+`build/SimpleLiveTune_artefacts/Release/`. With the default copy-after-build
+setting, CMake also copies VST3 to `~/.vst3` and CLAP to `~/.clap`.
+
+Pass `-DSIMPLELIVETUNE_BUILD_CLAP=OFF` if you only need the JUCE formats, or
+`-DSIMPLELIVETUNE_BUILD_PLUGIN=OFF` to build just the DSP library, tests, and
+offline tool.
 
 ## Acknowledgements
 
@@ -106,7 +123,9 @@ projects.
 
 It uses [JUCE](https://juce.com), the
 [VST3 SDK](https://github.com/steinbergmedia/vst3sdk), and Apple's Audio Unit
-SDK. VST is a registered trademark of Steinberg Media Technologies GmbH.
+SDK. CLAP support uses
+[clap-juce-extensions](https://github.com/free-audio/clap-juce-extensions).
+VST is a registered trademark of Steinberg Media Technologies GmbH.
 
 ## License
 

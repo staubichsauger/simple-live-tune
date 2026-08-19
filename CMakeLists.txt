@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
 project(SimpleLiveTune VERSION 0.1.1 LANGUAGES C CXX)
 
@@ -15,7 +15,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(SIMPLELIVETUNE_BUILD_PLUGIN "Build the AU/VST3/Standalone plugin (fetches JUCE)" ON)
+option(SIMPLELIVETUNE_BUILD_PLUGIN "Build the audio plug-in formats (fetches JUCE)" ON)
+option(SIMPLELIVETUNE_BUILD_CLAP "Build the CLAP plug-in" ON)
 
 add_library(simplelivetune_dsp
     src/dsp/Downsampler.cpp
@@ -65,12 +66,17 @@ if(SIMPLELIVETUNE_BUILD_PLUGIN)
     )
     FetchContent_MakeAvailable(JUCE)
 
+    set(SIMPLELIVETUNE_FORMATS VST3 Standalone)
+    if(APPLE)
+        list(APPEND SIMPLELIVETUNE_FORMATS AU)
+    endif()
+
     juce_add_plugin(SimpleLiveTune
         COMPANY_NAME "staubichsauger"
         BUNDLE_ID "com.staubichsauger.simplelivetune"
         PLUGIN_MANUFACTURER_CODE Stau
         PLUGIN_CODE Sltn
-        FORMATS AU VST3 Standalone
+        FORMATS ${SIMPLELIVETUNE_FORMATS}
         PRODUCT_NAME "Simple Live Tune"
         IS_SYNTH FALSE
         NEEDS_MIDI_INPUT FALSE
@@ -101,4 +107,23 @@ if(SIMPLELIVETUNE_BUILD_PLUGIN)
             juce::juce_recommended_lto_flags
             juce::juce_recommended_warning_flags
     )
+
+    if(SIMPLELIVETUNE_BUILD_CLAP)
+        # JUCE does not currently provide a CLAP wrapper. Keep this revision
+        # pinned so builds remain reproducible.
+        set(CLAP_JUCE_EXTENSIONS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+        FetchContent_Declare(clap_juce_extensions
+            GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
+            GIT_TAG c1a5ad025f95d01e03267857fa8276ebeed16500
+            GIT_SHALLOW TRUE
+            GIT_SUBMODULES clap-libs/clap clap-libs/clap-helpers
+            GIT_SUBMODULES_RECURSE TRUE
+        )
+        FetchContent_MakeAvailable(clap_juce_extensions)
+
+        clap_juce_extensions_plugin(TARGET SimpleLiveTune
+            CLAP_ID "com.staubichsauger.simplelivetune"
+            CLAP_FEATURES audio-effect pitch-shifter
+        )
+    endif()
 endif()
