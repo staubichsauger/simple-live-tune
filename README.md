@@ -120,8 +120,6 @@ offline tool.
 Simple Live Tune's approach is inspired by
 [Autotalent](http://web.mit.edu/tbaran/www/autotalent.html) by Tom Baran and
 [zita-at1](https://kokkinizita.linuxaudio.org/linuxaudio/) by Fons Adriaensen.
-It is an independent clean-room implementation and includes no code from those
-projects.
 
 It uses [JUCE](https://juce.com), the
 [VST3 SDK](https://github.com/steinbergmedia/vst3sdk), and Apple's Audio Unit
