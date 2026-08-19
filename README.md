@@ -1,139 +1,114 @@
 # Simple Live Tune
 
-A real-time pitch-correction (autotune) plugin with **zero added latency**,
-built for live use. AU + VST3 (via JUCE), macOS first.
-Published as **Simple Live Tune** by **staubichsauger** (AU codes:
-manufacturer `Stau`, subtype `Sltn`).
+Simple Live Tune is a free pitch-correction plug-in for live vocals. It moves
+sung notes toward the selected key and scale without delaying the audio path.
 
-Instead of buffering audio for analysis (the usual source of autotune latency),
-Simple Live Tune detects pitch on a trailing window of already-played samples
-and corrects pitch with a pitch-synchronous delay-line shifter — the audio path
-is never delayed. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design.
+It is available for macOS as an Audio Unit (AU), VST3 plug-in, and standalone
+app.
 
-## Status
+## Download
 
-All three planned implementation phases (see [ARCHITECTURE.md](ARCHITECTURE.md))
-are complete: the DSP core, the AU/VST3 plugin, and the custom UI with a
-pitch trace and note meter. Remaining ideas (MIDI note targeting, stereo
-link, formant preservation) are optional future work, not blockers.
+Download the latest version from the
+[GitHub releases page](https://github.com/staubichsauger/simple-live-tune/releases/latest).
 
-## Features
+Choose the macOS universal ZIP file. It works on Apple Silicon and Intel Macs
+running macOS 11 or later.
 
-- Near-zero-latency pitch correction (2-sample fixed delay when idle; up to
-  one pitch period of variable delay while actively shifting — see
-  [ARCHITECTURE.md](ARCHITECTURE.md) for the full latency budget)
-- Key/scale-based correction (Chromatic, Major, Minor) with adjustable
-  Retune Speed and Note Transition speed
-- Tune Tolerance dead zone, Vibrato preservation, Correction Amount (dry/wet),
-  Confidence Threshold and Gate to avoid tuning breaths/noise
-- Custom UI: live note meter with a ±50 cent deviation display, a scrolling
-  input-vs-corrected pitch trace, and a target-note keyboard strip
-- AU + VST3 + Standalone, built with JUCE; every plugin parameter is
-  remotable for host/hardware integration (see below)
+## Install
 
-## Building
+1. Quit your DAW or live audio host.
+2. Unzip the downloaded file.
+3. Install the format your host supports:
+   - Copy the AU file to `~/Library/Audio/Plug-Ins/Components/`.
+   - Copy the VST3 file to `~/Library/Audio/Plug-Ins/VST3/`.
+4. Fully reopen your host and rescan its plug-ins if necessary.
 
-Requires CMake 3.20+ and a C++20 compiler. JUCE is fetched automatically.
+You can install both formats. To test a microphone without a DAW, copy the
+included Simple Live Tune standalone app to your Applications folder.
 
-### Release build (required for live use)
+The download includes a more detailed installation guide.
 
-```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j 8
-ctest --test-dir build --output-on-failure
-```
+### If macOS blocks the app or plug-in
 
-This builds the DSP library, the `offline_tune` CLI tool, the unit tests, and
-(by default) the AU/VST3/Standalone plugin, installing the AU and VST3 to the
-standard user plug-in folders. Pass `-DSIMPLELIVETUNE_BUILD_PLUGIN=OFF` to
-skip JUCE and only build the DSP core, CLI tool, and tests.
+The release is not yet notarized by Apple. Only continue if you trust the
+download from this repository.
 
-Keep `-DCMAKE_BUILD_TYPE=Release` explicit when building the plugin for a DAW
-or live host. The project defaults fresh single-configuration build directories
-to Release as a safety net, but an unoptimized DSP binary from an older or
-custom configuration can overrun the audio deadline at small hardware buffers;
-32 samples at 48 kHz allows only about 0.67 ms per callback. Fully quit and
-relaunch the host after installing a new plugin build so it loads the updated
-component.
-
-### Debug build
-
-Use a separate directory for debugging and development checks:
+Open System Settings > Privacy & Security, scroll to the Security section, and
+choose Open Anyway. You can also remove the quarantine flag from the
+unzipped release using Terminal:
 
 ```sh
-cmake -S . -B build-debug -DCMAKE_BUILD_TYPE=Debug
-cmake --build build-debug -j 8
-ctest --test-dir build-debug --output-on-failure
+xattr -dr com.apple.quarantine "/path/to/Simple-Live-Tune"
 ```
 
-Debug builds are useful for diagnostics, but are not suitable for evaluating
-realtime performance or dropout behavior.
+Replace the example path with the folder you unzipped.
 
-## Usage
+## Get started
 
-- **DAW**: insert "Simple Live Tune" (AU or VST3) on a vocal track.
-- **Standalone**: run `build/SimpleLiveTune_artefacts/Standalone/Simple Live Tune.app`
-  for quick mic testing without a DAW.
-- **Offline**: `build/offline_tune <input.wav> <output.wav>` processes a
-  16-bit PCM WAV file through the engine for A/B listening.
+1. Add Simple Live Tune as an effect on a vocal track.
+2. Select the song's Key and choose Major, Minor, or Chromatic.
+3. Start with the default settings and sing into the microphone.
+4. Lower Correction Amount or increase Retune Speed if the correction sounds
+   too strong.
+
+Keep monitoring volume low during your first live test to avoid feedback.
+
+## Controls
+
+- Key and Scale choose the allowed notes.
+- Retune Speed sets how quickly the plug-in corrects a note. A low value reacts
+  quickly and sounds more obvious. A high value allows slower pitch movement.
+- Note Transition sets how quickly correction moves to a new note.
+- Correction Amount mixes the corrected vocal with the original vocal.
+- Tune Tolerance leaves small pitch differences untouched.
+- Vibrato preserves more of the singer's pitch movement.
+- Confidence Threshold and Gate prevent breaths, background noise,
+  and unclear notes from being tuned.
+- Bypass turns correction off without removing the plug-in.
+
+The display shows the detected note, how far it is from the target, and the
+original and corrected pitch over time.
+
+## Troubleshooting
+
+### The plug-in does not appear
+
+Make sure you copied it to the correct folder, fully quit and reopened the
+host, and rescanned the plug-in list. Check whether your host uses AU or VST3.
+
+### The standalone app receives no microphone signal
+
+Allow microphone access in System Settings > Privacy & Security > Microphone,
+then check the audio input selected in the app.
+
+### The correction sounds too strong
+
+Check the key and scale first. Then increase Retune Speed or Note Transition,
+or lower Correction Amount.
+
+### The plug-in tunes breaths or background noise
+
+Raise Gate or Confidence Threshold until the unwanted correction stops.
+
+## Technical information
+
+Read the [architecture and DSP notes](ARCHITECTURE.md) for implementation
+details. Building from source requires CMake 3.20+ and a C++20 compiler. CMake
+downloads JUCE during setup.
 
 ## Acknowledgements
 
-Simple Live Tune's approach is inspired by prior open-source work on
-low-latency pitch correction:
+Simple Live Tune's approach is inspired by
+[Autotalent](http://web.mit.edu/tbaran/www/autotalent.html) by Tom Baran and
+[zita-at1](https://kokkinizita.linuxaudio.org/linuxaudio/) by Fons Adriaensen.
+It is an independent clean-room implementation and includes no code from those
+projects.
 
-- **[Autotalent](http://web.mit.edu/tbaran/www/autotalent.html)** by Tom Baran
-  (GPL-2) — a LADSPA pitch-correction plugin pioneering the
-  pitch-synchronous delay-line shifting technique in open source.
-- **[zita-at1](https://kokkinizita.linuxaudio.org/linuxaudio/)** by
-  Fons Adriaensen (GPL-3) — a high-quality low-latency autotuner for Linux.
-
-Simple Live Tune is an independent clean-room implementation; no code from
-these projects is included.
-
-## Host integration (remote control)
-
-All controls are plain AU parameters (global scope), so hosts can automate
-Simple Live Tune with `AudioUnitSetParameter` — no string-to-value conversion
-needed. Raw values are the real units shown below.
-
-AU parameter IDs are hashes of the internal JUCE parameter IDs and are
-**stable across releases** as long as the internal IDs never change (they
-won't). Verified with `auval -v aufx Sltn Stau`:
-
-| AU Param ID | Name | Type / Unit | Range (Default) |
-|---|---|---|---|
-| 106079 | Key | indexed, 0–11 = C..B (semitones from C) | 0–11 (0 = C) |
-| 109250890 | Scale | indexed: 0 = Chromatic, 1 = Major, 2 = Minor | 0–2 (0) |
-| 1213086891 | Retune Speed | ms | 0–400 (20) |
-| 423325013 | Note Transition | ms | 0–200 (60) |
-| 733630552 | Correction Amount | 0–1 | 0–1 (1) |
-| 451310969 | Vibrato | 0–1 | 0–1 (0) |
-| 1033072653 | Tune Tolerance | cents | 0–50 (0) |
-| 829251210 | Confidence Threshold | 0.5–0.95 | 0.5–0.95 (0.95) |
-| 3165387 | Gate | dBFS (RMS) | -80 to -20 (-45) |
-| 773352680 | Bypass | boolean, 0/1 | 0/1 (0) |
-
-Notes for host authors:
-- Enharmonics: Db/C# etc. are the same Key index (1); there is no separate
-  flat/sharp parameter.
-- Prefer the `Bypass` parameter over `kAudioUnitProperty_BypassEffect`: the
-  engine keeps running and its buffers stay warm, so un-bypassing is
-  click-free (the AU property also works).
-- Key/Scale changes take effect at the next control hop (~1.3 ms) and glide
-  at the Note Transition speed — safe to change live mid-phrase.
-
-## Third-party components
-
-- **[JUCE](https://juce.com)** — application framework, used under the terms
-  of the GNU AGPLv3.
-- **[VST3 SDK](https://github.com/steinbergmedia/vst3sdk)** — used under the
-  GPLv3 option of its dual license.
-  *VST is a registered trademark of Steinberg Media Technologies GmbH.*
-- **Audio Unit SDK** (Apple) — Apache-2.0.
+It uses [JUCE](https://juce.com), the
+[VST3 SDK](https://github.com/steinbergmedia/vst3sdk), and Apple's Audio Unit
+SDK. VST is a registered trademark of Steinberg Media Technologies GmbH.
 
 ## License
 
-Simple Live Tune is free software, licensed under the
-**GNU General Public License v3.0 or later** (GPL-3.0-or-later).
-See [LICENSE](LICENSE) for the full text.
+Simple Live Tune is free software licensed under the
+[GNU General Public License v3.0 or later](LICENSE).
